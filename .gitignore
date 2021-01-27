@@ -112,6 +112,7 @@ fabric.properties
 *.dll
 *.so
 *.dylib
+/temp/
 
 # Test binary, built with `go test -c`
 *.test
