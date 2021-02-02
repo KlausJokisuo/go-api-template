@@ -25,13 +25,24 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("unable to read environment variables: %w", err)
 	}
-	_, _ = auth2.Get(cfg)
+
 	database, err := db.Get(cfg.DbDSN)
 	if err != nil {
 		return fmt.Errorf("unable to connect database: %w", err)
 	}
 
-	r, err := router.Get(database.Client)
+	tokenAuth, err := auth2.Get(cfg)
+	if err != nil {
+		return fmt.Errorf("unable to get token auth: %w", err)
+	}
+
+	// For debugging/example purposes, we generate and print
+	// a sample jwt token with claims `user_id:123` here:¨
+
+	_, tokenString, _ := tokenAuth.Encode(map[string]interface{}{"user_id": 123})
+	fmt.Printf("DEBUG: a sample jwt is %s\n\n", tokenString)
+
+	r, err := router.Get(database.Client, tokenAuth)
 	if err != nil {
 		return fmt.Errorf("unable to get routes: %w", err)
 	}

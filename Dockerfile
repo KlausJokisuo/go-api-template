@@ -29,6 +29,5 @@ RUN go build -v -o ./app ./cmd/server
 ## Create release build, only take go application into the release
 FROM scratch AS bin
 COPY --from=build src/app ./app
-RUN echo NOPE!
 CMD ["./app"]
 

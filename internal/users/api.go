@@ -3,6 +3,7 @@ package users
 import (
 	"fmt"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/jwtauth"
 	"github.com/go-chi/render"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -15,8 +16,9 @@ import (
 func Get(repository Repository) *chi.Mux {
 	res := resource{repository: repository}
 	r := chi.NewRouter()
-	r.Post("/", res.createUser)
+
 	r.Get("/", res.getUsers)
+	r.Post("/", res.createUser)
 	r.Get("/{id}", res.getUserByID)
 	r.Put("/{id}", res.updateUser)
 	r.Delete("/{id}", res.deleteUser)
@@ -29,6 +31,9 @@ type resource struct {
 
 func (res resource) getUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	_, claims, _ := jwtauth.FromContext(r.Context())
+
+	fmt.Println("Get user clöai", claims)
 
 	users, err := res.repository.Query(ctx, 0, 0)
 

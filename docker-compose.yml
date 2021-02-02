@@ -28,7 +28,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     command: -p 5433
-# Names our volume
+# Volume names
 volumes:
   go-source:
   pgdata:
