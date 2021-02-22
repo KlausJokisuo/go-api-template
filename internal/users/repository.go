@@ -45,7 +45,15 @@ func (r repository) Get(ctx context.Context, id int64) (entity.User, error) {
 }
 
 func (r repository) Count(ctx context.Context) (int, error) {
-	panic("implement me")
+	var count int
+
+	sql, _, err := sq.Select("count(*)").
+		From("users").
+		ToSql()
+
+	err = pgxscan.Select(ctx, r.dbClient, count, sql)
+
+	return count, err
 }
 
 func (r repository) Query(ctx context.Context, offset, limit int) ([]entity.User, error) {
@@ -72,9 +80,9 @@ func (r repository) Create(ctx context.Context, req entity.User) (entity.User, e
 			PlaceholderFormat(sq.Dollar).
 			ToSql()
 
-	err = pgxscan.Get(ctx, r.dbClient, &existingUser, checkUserQuery)
-	if err == nil {
-		return entity.User{}, fmt.Errorf("%v is already in use", existingUser.Email)
+	_ = pgxscan.Get(ctx, r.dbClient, &existingUser, checkUserQuery)
+	if &existingUser != nil {
+		return entity.User{}, fmt.Errorf("%v is already in use", req.Email)
 	}
 
 	insertQuery, args, err := sq.Insert("users").
@@ -87,8 +95,6 @@ func (r repository) Create(ctx context.Context, req entity.User) (entity.User, e
 		Values(req.FirstName, req.LastName, req.Address, req.Email, req.Password).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
-
-	fmt.Println(insertQuery)
 
 	err = r.dbClient.QueryRow(ctx, insertQuery, args...).Scan(&newUser.ID)
 

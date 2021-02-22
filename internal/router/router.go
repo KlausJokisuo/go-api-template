@@ -20,8 +20,7 @@ func Get(dbClient *pgxpool.Pool, tokenAuth *jwtauth.JWTAuth) (*chi.Mux, error) {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.With(jwtauth.Verifier(tokenAuth), jwtauth.Authenticator).
-		Mount("/users", users.Get(users.NewUserRepository(dbClient)))
+	r.Mount("/users", users.Get(users.NewUserRepository(dbClient), tokenAuth))
 
 	walkFunc := func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		log.WithFields(log.Fields{

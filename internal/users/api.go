@@ -13,27 +13,28 @@ import (
 	"testapi/json"
 )
 
-func Get(repository Repository) *chi.Mux {
-	res := resource{repository: repository}
+func Get(repository Repository, tokenAuth *jwtauth.JWTAuth) *chi.Mux {
+	res := resource{repository: repository, tokenAuth: tokenAuth}
 	r := chi.NewRouter()
 
-	r.Get("/", res.getUsers)
+	jwtMiddleware := []func(http.Handler) http.Handler{jwtauth.Verifier(tokenAuth), jwtauth.Authenticator}
+
 	r.Post("/", res.createUser)
-	r.Get("/{id}", res.getUserByID)
-	r.Put("/{id}", res.updateUser)
-	r.Delete("/{id}", res.deleteUser)
+
+	r.With(jwtMiddleware...).Get("/", res.getUsers)
+	r.With(jwtMiddleware...).Get("/{id}", res.getUserByID)
+	r.With(jwtMiddleware...).Put("/{id}", res.updateUser)
+	r.With(jwtMiddleware...).Delete("/{id}", res.deleteUser)
 	return r
 }
 
 type resource struct {
 	repository Repository
+	tokenAuth  *jwtauth.JWTAuth
 }
 
 func (res resource) getUsers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	_, claims, _ := jwtauth.FromContext(r.Context())
-
-	fmt.Println("Get user clöai", claims)
 
 	users, err := res.repository.Query(ctx, 0, 0)
 
@@ -130,13 +131,12 @@ func (res resource) createUser(w http.ResponseWriter, r *http.Request) {
 			"err": err,
 		}).Info("Unable to create user")
 
-		w.WriteHeader(http.StatusInternalServerError)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, json.H{"errors": "unable to create user"})
 		return
 	}
 
 	user.Password = string(pass)
-
-	fmt.Println(user.Password)
 
 	newUser, err := res.repository.Create(ctx, user)
 
@@ -145,13 +145,25 @@ func (res resource) createUser(w http.ResponseWriter, r *http.Request) {
 			"err": err,
 		}).Info("Unable to create user")
 
-		render.Status(r, http.StatusBadRequest)
+		render.Status(r, http.StatusConflict)
 		render.JSON(w, r, json.H{"errors": err.Error()})
 		return
 	}
 
+	_, tokenString, err := res.tokenAuth.Encode(map[string]interface{}{"user_id": newUser.ID})
+
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Info("Unable to create user")
+
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, json.H{"errors": "unable to create user"})
+		return
+	}
+
 	render.Status(r, http.StatusOK)
-	render.JSON(w, r, newUser)
+	render.JSON(w, r, json.H{"token": tokenString})
 
 }
 
