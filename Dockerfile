@@ -1,15 +1,3 @@
-## Add Air for development live-reload
-FROM golang:alpine  AS dev
-WORKDIR /src
-RUN apk add --no-cache curl
-RUN curl -sSfL https://raw.githubusercontent.com/cosmtrek/air/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-
-## Add the wait script to the image
-ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
-RUN chmod +x /wait
-
-CMD /wait && air
-
 ## Get dependencies
 FROM golang:alpine AS dependencies
 WORKDIR /src
